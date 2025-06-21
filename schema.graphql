@@ -1,0 +1,12 @@
+type User @entity {
+  id: ID
+  username: String!
+  name: String!
+}
+
+type Post @entity {
+  id: ID
+  title: String!
+  content: String!
+  user: User!
+}

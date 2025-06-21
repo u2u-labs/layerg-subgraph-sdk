@@ -1,13 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "es2022",
-    "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "./dist",
+    "module": "commonjs",
+    "target": "es2017",
+    "declaration": true,
     "strict": true,
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "skipLibCheck": true
+    "esModuleInterop": true
   },
-  "include": ["src"]
+  "include": ["src/**/*"]
 }
