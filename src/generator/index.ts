@@ -56,7 +56,8 @@ for (const def of entityDefs) {
   });
 
   const source = `// Auto-generated entity class for ${name}
-import { set, get, getBy, findMany, count } from "../runtime/db";
+import { set, get, getBy, count } from "../runtime/db";
+import { onInsert } from "../runtime/listener";
 
 export class ${name} {
   static table = "${name}";
@@ -85,11 +86,8 @@ ${props.join("\n")}
     return count<${name}>(${name}.table, where);
   }
 
-  static async onNewRecord(callback: (data: ${name}) => void) {
-    await startDbListener(${name}.table);
-    onInsert(${name}.table, (row) => {
-      callback(new ${name}(row));
-    });
+  static onNewRecord(callback: (data: ${name}) => void) {
+    onInsert(${name}.table, (row) => callback(new ${name}(row)));
   }
 }
 `;

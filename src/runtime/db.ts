@@ -1,6 +1,5 @@
 import { Pool, QueryResultRow } from "pg";
 import dotenv from "dotenv";
-import EventEmitter from "events";
 dotenv.config();
 
 const pool = new Pool({
@@ -11,32 +10,6 @@ const pool = new Pool({
     process.env.PG_CONNECTION_TIMEOUT || "2000"
   ),
 });
-const dbEvents = new EventEmitter();
-const activeTables = new Set<string>();
-
-export async function startDbListener(table: string) {
-  const channel = `table_insert_${table}`;
-  if (activeTables.has(table)) return;
-  activeTables.add(table);
-
-  const client = await pool.connect();
-  await client.query(`LISTEN "${channel}"`);
-
-  client.on("notification", (msg) => {
-    if (msg.channel === channel) {
-      try {
-        const payload = JSON.parse(msg.payload ?? "{}");
-        dbEvents.emit(channel, payload);
-      } catch (err) {
-        console.error("Invalid JSON from NOTIFY:", msg.payload);
-      }
-    }
-  });
-
-  client.on("error", (err) => {
-    console.error("Listener client error:", err);
-  });
-}
 
 function assertRows<T>(result: unknown): asserts result is T[] {
   if (!Array.isArray(result)) {
@@ -120,9 +93,4 @@ export async function count<T extends QueryResultRow>(
 
   const { rows } = await pool.query<{ count: string }>(query, values);
   return parseInt(rows[0]?.count ?? "0", 10);
-}
-
-export function onInsert(table: string, callback: (row: any) => void) {
-  const channel = `table_insert_${table}`;
-  dbEvents.on(channel, callback);
 }
