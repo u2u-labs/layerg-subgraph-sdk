@@ -6,8 +6,11 @@ switch (command) {
   case "deploy":
     import("./deployer/index.js").then((m) => m.deploy?.());
     break;
-  case "generate":
-    import("./generator/index.js").then((m) => m.generate?.());
+  case "generate-entity":
+    import("./entity-generator/index.js").then((m) => m.generate?.());
+    break;
+  case "generate-query-entity":
+    import("./query-client-generator/index.js").then((m) => m.generate?.());
     break;
   case "verify":
     import("./verifier/index.js").then((m) => m.getSubgraphConfig?.());

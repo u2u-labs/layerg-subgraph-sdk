@@ -39,8 +39,7 @@ export const generate = () => {
     (d): d is ObjectTypeDefinitionNode => {
       return (
         d.kind === "ObjectTypeDefinition" &&
-        Array.isArray(d.directives) &&
-        d.directives.some((dir) => dir.name?.value === "entity")
+        Array.isArray(d.directives)
       );
     }
   );
