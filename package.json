@@ -1,16 +1,15 @@
 {
-  "name": "layerg-subgraph-sdk",
+  "name": "layerg-graph",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/bin/deployer/index.js dist/bin/generator/index.js && node scripts/add-shebang.js && chmod +x dist/bin/deployer/index.js && chmod +x dist/bin/generator/index.js ",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "generate": "./dist/bin/generator/index.js",
-    "deploy": "./dist/bin/deployer/index.js"
+    "layerg-graph": "./dist/bin/cli.js"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +30,11 @@
     "events": "^3.3.0",
     "graphql": "^16.11.0",
     "js-yaml": "^4.1.0",
-    "pg": "^8.16.2"
-  }
+    "pg": "^8.16.2",
+    "zod": "^3.25.67"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ]
 }

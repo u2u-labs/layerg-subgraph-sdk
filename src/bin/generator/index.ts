@@ -1,15 +1,13 @@
-#!/usr/bin/env ts-node
-
 import { parse, ObjectTypeDefinitionNode, DocumentNode } from "graphql";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 
 const args = process.argv.slice(2);
 const schemaPath = args[args.indexOf("--schema") + 1];
-const outputDir = args[args.indexOf("--outDir") + 1];
+const outputDir = args[args.indexOf("--out") + 1];
 
 if (!schemaPath || !outputDir) {
-  console.error("Usage: --schema <path> --outDir <output directory>");
+  console.error("Usage: --schema <path> --out <output directory>");
   process.exit(1);
 }
 
