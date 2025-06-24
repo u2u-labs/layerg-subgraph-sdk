@@ -16,9 +16,6 @@ const pool = new Pool({
 const dbEvents = new EventEmitter();
 const activeTables = new Set<string>();
 
-/**
- * Internally registers a LISTEN channel for a table, only once
- */
 export async function startDbListener(table: string) {
   if (activeTables.has(table)) return;
   activeTables.add(table);
@@ -44,9 +41,6 @@ export async function startDbListener(table: string) {
   });
 }
 
-/**
- * Public method to subscribe to insert events on a table
- */
 export async function onInsert(table: string, callback: (row: any) => void) {
   await startDbListener(table);
   const channel = `table_insert_${table}`;

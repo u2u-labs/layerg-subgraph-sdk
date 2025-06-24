@@ -1,15 +1,19 @@
-type HandlerConfig = {
-  event: string;
-  handler: string;
-};
-
-type SubgraphConfig = {
-  dataSource: {
+export type SubgraphConfig = {
+  name: string;
+  slug: string;
+  apiKey: string;
+  region: string;
+  resource: {
+    schema: string;
+    handler: string;
+  };
+  dataSources: Array<{
     chainId: number;
     contractAddress: string;
     startBlock: number;
-  };
-  schemaFilePath: string;
-  name: string;
-  handlers: HandlerConfig[];
+  }>;
+  eventHandlers: Array<{
+    event: string;
+    handler: string;
+  }>;
 };
