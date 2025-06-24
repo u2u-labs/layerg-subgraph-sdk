@@ -1,15 +1,15 @@
 {
-  "name": "layerg-graph",
+  "name": "layerg-graph-1",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && chmod +x dist/bin/deployer/index.js dist/bin/generator/index.js && node scripts/add-shebang.js && chmod +x dist/bin/deployer/index.js && chmod +x dist/bin/generator/index.js ",
+    "build": "tsc && chmod +x dist/bin/deployer/index.js dist/bin/generator/index.js dist/bin/verifier/index.js && node scripts/add-shebang.js && chmod +x dist/bin/deployer/index.js && chmod +x dist/bin/generator/index.js && chmod +x dist/bin/verifier/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "layerg-graph": "./dist/bin/cli.js"
+    "layerg-graph-1": "./dist/bin/cli.js"
   },
   "keywords": [],
   "author": "",

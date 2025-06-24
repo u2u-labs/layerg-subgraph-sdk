@@ -7,7 +7,10 @@ switch (command) {
     import("./deployer/index.js").then((m) => m.deploy?.());
     break;
   case "generate":
-    import("./generator/index.js").then((m: any) => m.generate?.());
+    import("./generator/index.js").then((m) => m.generate?.());
+    break;
+  case "verify":
+    import("./verifier/index.js").then((m) => m.getSubgraphConfig?.());
     break;
   default:
     console.error("Unknown command:", command);

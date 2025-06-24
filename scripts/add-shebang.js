@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const files = [
   path.join(__dirname, "../dist/bin/deployer/index.js"),
   path.join(__dirname, "../dist/bin/generator/index.js"),
+  path.join(__dirname, "../dist/bin/verifier/index.js"),
 ];
 
 const shebang = "#!/usr/bin/env node\n";

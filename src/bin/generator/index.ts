@@ -2,58 +2,59 @@ import { parse, ObjectTypeDefinitionNode, DocumentNode } from "graphql";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
 
-const args = process.argv.slice(2);
-const schemaPath = args[args.indexOf("--schema") + 1];
-const outputDir = args[args.indexOf("--out") + 1];
+export const generate = () => {
+  const args = process.argv.slice(2);
+  const schemaPath = args[args.indexOf("--schema") + 1];
+  const outputDir = args[args.indexOf("--out") + 1];
 
-if (!schemaPath || !outputDir) {
-  console.error("Usage: --schema <path> --out <output directory>");
-  process.exit(1);
-}
-
-const rawSchema = readFileSync(schemaPath, "utf-8");
-const ast: DocumentNode = parse(rawSchema);
-
-if (!existsSync(outputDir)) {
-  mkdirSync(outputDir, { recursive: true });
-}
-
-const scalarMap: Record<string, string> = {
-  ID: "string",
-  String: "string",
-  Int: "number",
-  Float: "number",
-  Boolean: "boolean",
-  BigInt: "string",
-  Bytes: "string",
-};
-
-function unwrapType(typeNode: any): string {
-  if (typeNode.kind === "NamedType") return typeNode.name.value;
-  if (typeNode.type) return unwrapType(typeNode.type);
-  return "any";
-}
-
-const entityDefs = ast.definitions.filter(
-  (d): d is ObjectTypeDefinitionNode => {
-    return (
-      d.kind === "ObjectTypeDefinition" &&
-      Array.isArray(d.directives) &&
-      d.directives.some((dir) => dir.name?.value === "entity")
-    );
+  if (!schemaPath || !outputDir) {
+    console.error("Usage: --schema <path> --out <output directory>");
+    process.exit(1);
   }
-);
 
-for (const def of entityDefs) {
-  const name = def.name.value;
-  const fields = def.fields || [];
+  const rawSchema = readFileSync(schemaPath, "utf-8");
+  const ast: DocumentNode = parse(rawSchema);
 
-  const props = fields.map((f) => {
-    const tsType = scalarMap[unwrapType(f.type)] || "any";
-    return `  ${f.name.value}!: ${tsType};`;
-  });
+  if (!existsSync(outputDir)) {
+    mkdirSync(outputDir, { recursive: true });
+  }
 
-  const source = `// Auto-generated entity class for ${name}
+  const scalarMap: Record<string, string> = {
+    ID: "string",
+    String: "string",
+    Int: "number",
+    Float: "number",
+    Boolean: "boolean",
+    BigInt: "string",
+    Bytes: "string",
+  };
+
+  function unwrapType(typeNode: any): string {
+    if (typeNode.kind === "NamedType") return typeNode.name.value;
+    if (typeNode.type) return unwrapType(typeNode.type);
+    return "any";
+  }
+
+  const entityDefs = ast.definitions.filter(
+    (d): d is ObjectTypeDefinitionNode => {
+      return (
+        d.kind === "ObjectTypeDefinition" &&
+        Array.isArray(d.directives) &&
+        d.directives.some((dir) => dir.name?.value === "entity")
+      );
+    }
+  );
+
+  for (const def of entityDefs) {
+    const name = def.name.value;
+    const fields = def.fields || [];
+
+    const props = fields.map((f) => {
+      const tsType = scalarMap[unwrapType(f.type)] || "any";
+      return `  ${f.name.value}!: ${tsType};`;
+    });
+
+    const source = `// Auto-generated entity class for ${name}
 import { set, get, getBy, count } from "../runtime/db";
 import { onInsert } from "../runtime/listener";
 
@@ -90,6 +91,9 @@ ${props.join("\n")}
 }
 `;
 
-  const filepath = join(outputDir, `${name}.ts`);
-  writeFileSync(filepath, source);
-}
+    const filepath = join(outputDir, `${name}.ts`);
+    writeFileSync(filepath, source);
+  }
+};
+
+generate();
