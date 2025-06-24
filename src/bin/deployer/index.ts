@@ -32,8 +32,6 @@ const configSchema = z.object({
   ),
 });
 
-export type SubgraphConfig = z.infer<typeof configSchema>;
-
 const assertFileExists = (filePath: string, label: string) => {
   if (!existsSync(filePath)) {
     console.error(`❌ Missing required file: ${filePath} (${label})`);
@@ -48,11 +46,11 @@ const assertFileExists = (filePath: string, label: string) => {
 };
 
 // Load config.yaml as SubgraphConfig
-const loadConfig = (): SubgraphConfig => {
+const loadConfig = (): z.infer<typeof configSchema> => {
   console.log("Loading config.yaml...");
   const content = fs.readFileSync("config.yaml", "utf8");
   console.log("Config loaded.");
-  const config = yaml.load(content) as SubgraphConfig;
+  const config = yaml.load(content) as z.infer<typeof configSchema>;
   const parsed = configSchema.safeParse(config);
 
   if (!parsed.success) {
@@ -106,7 +104,7 @@ const zipFiles = (
 };
 
 // Step 1: Create subgraph info
-const createSubgraphInfo = async (config: SubgraphConfig) => {
+const createSubgraphInfo = async (config: z.infer<typeof configSchema>) => {
   const { apiKey, name, slug, dataSources } = config;
   const payload = {
     name,
@@ -133,7 +131,7 @@ const createSubgraphInfo = async (config: SubgraphConfig) => {
 // Step 2: Request pre-signed upload URL
 const getPresignedUploadURL = async (
   subgraphId: string,
-  config: SubgraphConfig
+  config: z.infer<typeof configSchema>
 ) => {
   const response = await axios.post(
     `${BASE_URL}/api/resource/presigned-url`,
@@ -157,7 +155,10 @@ const uploadZip = async (presignedUrl: string, zipPath: string) => {
 };
 
 // Step 4: Get resource URL for verification
-const fetchResourceUrl = async (subgraphId: string, config: SubgraphConfig) => {
+const fetchResourceUrl = async (
+  subgraphId: string,
+  config: z.infer<typeof configSchema>
+) => {
   const response = await axios.get(
     `${BASE_URL}/api/resource/presigned-url/${subgraphId}`,
     { headers: { Authorization: config.apiKey } }
@@ -169,7 +170,7 @@ const fetchResourceUrl = async (subgraphId: string, config: SubgraphConfig) => {
 const updateSubgraphResource = async (
   subgraphId: string,
   resourceUrl: string,
-  config: SubgraphConfig
+  config: z.infer<typeof configSchema>
 ) => {
   await axios.put(
     `${BASE_URL}/api/subgraph/deploy/${subgraphId}`,
