@@ -37,10 +37,7 @@ export const generate = () => {
 
   const entityDefs = ast.definitions.filter(
     (d): d is ObjectTypeDefinitionNode => {
-      return (
-        d.kind === "ObjectTypeDefinition" &&
-        Array.isArray(d.directives)
-      );
+      return d.kind === "ObjectTypeDefinition" && Array.isArray(d.directives);
     }
   );
 
@@ -54,7 +51,7 @@ export const generate = () => {
     });
 
     const source = `// Auto-generated entity class for ${name}
-import { set, get, getBy, count, onInsert } from "layerg-graph-8";
+import { set, get, getBy, count } from "layerg-graph-8";
 
 export class ${name} {
   static table = "${name.toLowerCase()}s";
@@ -81,10 +78,6 @@ ${props.join("\n")}
 
   static async count(where: Partial<${name}> = {}, chainId: number): Promise<number> {
     return count<${name}>(${name}.table + '_' + chainId, where);
-  }
-
-  static onNewRecord(callback: (data: ${name}) => void, chainId: number) {
-    onInsert(${name}.table + '_' + chainId, (row) => callback(new ${name}(row)));
   }
 }
 `;
