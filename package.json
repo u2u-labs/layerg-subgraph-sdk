@@ -1,15 +1,15 @@
 {
-  "name": "layerg-graph-1",
+  "name": "layerg-graph-5",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && chmod +x dist/bin/deployer/index.js dist/bin/generator/index.js dist/bin/verifier/index.js && node scripts/add-shebang.js && chmod +x dist/bin/deployer/index.js && chmod +x dist/bin/generator/index.js && chmod +x dist/bin/verifier/index.js",
+    "build": "tsc && chmod +x dist/bin/deployer/index.js dist/bin/entity-generator/index.js dist/bin/query-client-generator/index.js dist/bin/verifier/index.js && node scripts/add-shebang.js && chmod +x dist/bin/deployer/index.js && chmod +x dist/bin/entity-generator/index.js && chmod +x dist/bin/verifier/index.js && chmod +x dist/bin/query-client-generator/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "layerg-graph-1": "./dist/bin/cli.js"
+    "layerg-graph-5": "./dist/bin/cli.js"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,7 @@
   "packageManager": "pnpm@10.11.1",
   "devDependencies": {
     "@types/archiver": "^6.0.3",
+    "@types/express": "^5.0.3",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.0.1",
     "@types/pg": "^8.15.4",
@@ -24,13 +25,18 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "adm-zip": "^0.5.16",
     "archiver": "^7.0.1",
     "axios": "^1.10.0",
     "dotenv": "^16.5.0",
     "events": "^3.3.0",
+    "eventsource": "^4.0.0",
     "graphql": "^16.11.0",
     "graphql-request": "^7.2.0",
+    "install": "^0.13.0",
     "js-yaml": "^4.1.0",
+    "npm": "^11.4.2",
     "pg": "^8.16.2",
     "zod": "^3.25.67"
   },

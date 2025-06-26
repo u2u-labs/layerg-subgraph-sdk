@@ -1,130 +1,270 @@
 #!/usr/bin/env ts-node
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  createWriteStream,
+  rmSync,
+} from "fs";
+import AdmZip from "adm-zip";
 import { join } from "path";
 import {
   parse,
   ObjectTypeDefinitionNode,
   NamedTypeNode,
   TypeNode,
+  FieldDefinitionNode,
 } from "graphql";
+import { get } from "https";
 
-export const generate = () => {
+const baseUrl = "https://c11p7wbp-8080.asse.devtunnels.ms";
+
+const scalarMap: Record<string, string> = {
+  ID: "string",
+  String: "string",
+  Int: "number",
+  Float: "number",
+  Boolean: "boolean",
+  BigInt: "string",
+  Bytes: "string",
+};
+
+const unwrapType = (typeNode: TypeNode): string => {
+  if (typeNode.kind === "NamedType") return typeNode.name.value;
+  if ("type" in typeNode) return unwrapType(typeNode.type);
+  return "any";
+};
+
+const buildFieldSelection = (
+  fields: readonly FieldDefinitionNode[],
+  selectArg?: any
+): string => {
+  return fields
+    .map((field: any) => {
+      const type = unwrapType(field.type);
+      if (scalarMap[type]) {
+        return field.name.value;
+      } else {
+        const subSelect = selectArg?.[field.name.value];
+        if (typeof subSelect === "object" && subSelect !== null) {
+          const keys = Object.keys(subSelect).join(" ");
+          return field.name.value + " { " + keys + " }";
+        } else {
+          return field.name.value + " { id }";
+        }
+      }
+    })
+    .join("\\n        ");
+};
+
+export const generate = async () => {
   const args = process.argv.slice(2);
-  const schemaPath = args[args.indexOf("--schema") + 1];
-  const outDir = args[args.indexOf("--outDir") + 1];
-
-  if (!schemaPath || !outDir) {
+  const subgraphId = args[args.indexOf("--id") + 1];
+  const apiKey = args[args.indexOf("--apiKey") + 1];
+  const outDir = "generated";
+  if (!subgraphId || !apiKey) {
     console.error(
-      "Usage: ts-node generate-client.ts --schema <path> --outDir <directory>"
+      "Usage: npx layerg-graph-5 generate-query-client --id <subgraphId> --apiKey <apiKey>"
     );
     process.exit(1);
   }
 
-  const scalarMap: Record<string, string> = {
-    ID: "string",
-    String: "string",
-    Int: "number",
-    Float: "number",
-    Boolean: "boolean",
-    BigInt: "string",
-    Bytes: "string",
-  };
-
-  function unwrapType(typeNode: TypeNode): string {
-    if (typeNode.kind === "NamedType") return typeNode.name.value;
-    if ("type" in typeNode) return unwrapType(typeNode.type);
-    return "any";
-  }
-
-  const rawSchema = readFileSync(schemaPath, "utf-8");
-  const ast = parse(rawSchema);
-
-  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-  const typesDir = join(outDir, "types");
-  const clientsDir = join(outDir, "clients");
-  mkdirSync(typesDir, { recursive: true });
-  mkdirSync(clientsDir, { recursive: true });
-
-  const entities = ast.definitions.filter(
-    (d): d is ObjectTypeDefinitionNode =>
-      d.kind === "ObjectTypeDefinition"
+  const getSubgraphUrlResponse = await fetch(
+    `${baseUrl}/api/resource/presigned-url/${subgraphId}`,
+    {
+      headers: {
+        Authorization: apiKey,
+      },
+    }
   );
+  const getSubgraphUrlJson = await getSubgraphUrlResponse.json();
+  const subgraphUrl = getSubgraphUrlJson.data.url;
+  const outputPath = "resources.zip";
+  const extractTo = ".";
 
-  const clientImports: string[] = [];
-  const clientExports: string[] = [];
+  get(subgraphUrl, (response) => {
+    const fileStream = createWriteStream(outputPath);
+    response.pipe(fileStream);
 
-  for (const entity of entities) {
-    const name = entity.name.value;
-    const singular = name.toLowerCase();
-    const plural = singular + "s";
+    fileStream.on("finish", () => {
+      fileStream.close();
+      console.log("Download complete.");
+      const zip = new AdmZip(outputPath);
+      zip.extractAllTo(extractTo, true);
+      const rawSchema = readFileSync(
+        `${extractTo}/resources/schema.graphql`,
+        "utf-8"
+      );
+      const ast = parse(rawSchema);
+      console.log("Schema parsed successfully.");
 
-    const fields = (entity.fields || []).map((f) => {
-      const typeName = unwrapType(f.type);
-      const tsType = scalarMap[typeName] || "any";
-      return { name: f.name.value, tsType };
-    });
+      if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+      const typesDir = join(outDir, "types");
+      const clientsDir = join(outDir, "clients");
+      mkdirSync(typesDir, { recursive: true });
+      mkdirSync(clientsDir, { recursive: true });
 
-    const gqlFields = fields.map((f) => f.name).join("\n          ");
+      const utilsPath = join(outDir, "helpers.ts");
+      const utilsContent = `
+export const scalarMap: Record<string, string> = {
+  ID: "string",
+  String: "string",
+  Int: "number",
+  Float: "number",
+  Boolean: "boolean",
+  BigInt: "string",
+  Bytes: "string",
+};
 
-    const typeDef = `export type ${name} = {
+export function unwrapType(typeNode: any): string {
+  if (typeNode.kind === "NamedType") return typeNode.name.value;
+  if ("type" in typeNode) return unwrapType(typeNode.type);
+  return "any";
+}
+
+export const buildFieldSelection = (
+  fields: readonly any[],
+  selectArg?: any
+): string => {
+  return fields
+    .map((field: any) => {
+      const type = unwrapType(field.type);
+      if (scalarMap[type]) {
+        return field.name.value;
+      } else {
+        const subSelect = selectArg?.[field.name.value];
+        if (typeof subSelect === "object" && subSelect !== null) {
+          const keys = Object.keys(subSelect).join(" ");
+          return field.name.value + " { " + keys + " }";
+        } else {
+          return field.name.value + " { id }";
+        }
+      }
+    })
+    .join("\\n        ");
+};
+`;
+
+      writeFileSync(utilsPath, utilsContent);
+
+      const entities = ast.definitions.filter(
+        (d): d is ObjectTypeDefinitionNode => d.kind === "ObjectTypeDefinition"
+      );
+      const entityMap = new Map<string, ObjectTypeDefinitionNode>();
+      for (const entity of entities) {
+        entityMap.set(entity.name.value, entity);
+      }
+
+      const clientImports: string[] = [];
+      const clientExports: string[] = [];
+
+      for (const entity of entities) {
+        const name = entity.name.value;
+        const singular = name.toLowerCase();
+        const plural = singular + "s";
+
+        const fields = (entity.fields || []).map((f) => {
+          const typeName = unwrapType(f.type);
+          const tsType = scalarMap[typeName] || "any";
+          return { name: f.name.value, tsType };
+        });
+
+        const typeDef = `export type ${name} = {
 ${fields.map((f) => `  ${f.name}: ${f.tsType};`).join("\n")}
 };`;
-    writeFileSync(join(typesDir, `${name}.ts`), typeDef);
+        writeFileSync(join(typesDir, `${name}.ts`), typeDef);
+        const selectFieldLines = (entity.fields || []).map((f) => {
+          const typeName = unwrapType(f.type);
+          if (scalarMap[typeName]) {
+            return `  ${f.name.value}?: boolean;`;
+          } else {
+            const subEntity = entityMap.get(typeName);
+            const nested =
+              subEntity?.fields
+                ?.map((sf) => `    ${sf.name.value}?: boolean;`)
+                .join("\n") || "    id?: boolean;";
+            return `  ${f.name.value}?: {
+${nested}
+  };`;
+          }
+        });
 
-    const clientCode = `
+        const selectTypeDef = `export type ${name}Select = {
+${selectFieldLines.join("\n")}
+};`;
+        writeFileSync(join(typesDir, `${name}Select.ts`), selectTypeDef);
+        const defaultFields = buildFieldSelection(entity.fields || []);
+
+        const clientCode =
+          `
 import { request } from "graphql-request";
 import { ${name} } from "../types/${name}";
+import { ${name}Select } from "../types/${name}Select";
+import { buildFieldSelection } from "../helpers";
+
+const defaultFields = ` +
+          "`" +
+          buildFieldSelection(entity.fields || []) +
+          "`" +
+          `;
+
+function selectFields(select: ${name}Select | undefined): string {
+  return select
+    ? buildFieldSelection(${JSON.stringify(entity.fields)}, select)
+    : defaultFields;
+}
 
 export function ${plural}(subgraphUrl: string) {
   return {
-    async findById(id: string): Promise<${name} | null> {
-      type Response = { ${singular}: ${name} };
-      const res: Response = await request(subgraphUrl, \`
-        query ($id: ID!) {
-          ${singular}(id: $id) {
-            ${gqlFields}
-          }
+    findById(id: string) {
+      return {
+        async select(select: ${name}Select): Promise<${name} | null> {
+          const gqlFields = selectFields(select);
+
+          const query = ` +
+          "`" +
+          `
+            query ($id: ID!) {
+              ${plural}(where: { id: $id }) {
+                ${"${gqlFields}"}
+              }
+            }
+          ` +
+          "`" +
+          `;
+          type Response = { ${plural}: ${name}[] };
+          const res: Response = await request(subgraphUrl, query, { id });
+          return res.${plural}[0] || null;
         }
-      \`, { id });
-      return res.${singular};
+      };
     },
 
-    async findOne(where: Partial<${name}>): Promise<${name} | null> {
-      type Response = { ${plural}: ${name}[] };
-      const res: Response = await request(subgraphUrl, \`
-        query ($where: ${name}_filter, $first: Int) {
-          ${plural}(where: $where, first: 1) {
-            ${gqlFields}
-          }
-        }
-      \`, { where, first: 1 });
-      return res.${plural}[0] || null;
-    },
+    findMany(args: { where?: Partial<${name}>; first?: number; skip?: number; orderBy?: string; orderDirection?: string }) {
+      return {
+        async select(select: ${name}Select): Promise<${name}[]>  {
+        const gqlFields = selectFields(select);     
+        const { where } = args;
 
-    async findMany(options: {
-      where?: Partial<${name}>;
-      first?: number;
-      skip?: number;
-      orderBy?: keyof ${name};
-      orderDirection?: "asc" | "desc";
-    } = {}): Promise<${name}[]> {
-      type Response = { ${plural}: ${name}[] };
-      const res: Response = await request(subgraphUrl, \`
-        query ($where: ${name}_filter, $first: Int, $skip: Int, $orderBy: String, $orderDirection: String) {
-          ${plural}(where: $where, first: $first, skip: $skip, orderBy: $orderBy, orderDirection: $orderDirection) {
-            ${gqlFields}
-          }
-        }
-      \`, options);
-      return res.${plural};
-    },
+        const whereLiteral = Object.entries(where || {}).map(([key, value]) => {
+        if (typeof value === 'string') {
+          return \`\${key}: "\${value}"\`\;
+        }})
 
-    subscribe({ where, onData }: { where?: Partial<${name}>; onData: (data: ${name}) => void }): void {
-      const params = new URLSearchParams();
-      params.set("entity", "${name}");
-      if (where) params.set("where", encodeURIComponent(JSON.stringify(where)));
-      const sseUrl = subgraphUrl.replace("/graphql", "/sse") + "/?" + params.toString();
+        const query = \`query {
+        ${plural}(where: { \${whereLiteral} }) {
+          \${gqlFields}\
+        }}\`;
+    
+        type Response = { ${plural}: ${name}[] };
+        const res: Response = await request(subgraphUrl, query, { where });
+        return res.${plural};
+      }          
+    }},
+
+    subscribe({ onData }: { onData: (data: ${name}) => void }): void {
+      const sseUrl = subgraphUrl.replace("/graphql", "/events/stream") +"&typeName=${name.toLowerCase()}s";
       const es = new EventSource(sseUrl);
 
       es.onmessage = (event) => {
@@ -140,16 +280,52 @@ export function ${plural}(subgraphUrl: string) {
         console.error("SSE connection error", err);
         es.close();
       };
+
+      es.addEventListener("connection", (event) => {
+        try {
+          const data: ${name} = JSON.parse(event.data);
+          onData(data);
+        } catch (err) {
+          console.error("Invalid SSE data", err);
+        }
+      });
+
+      es.addEventListener("insert", (event) => {
+        try {
+          const data: ${name} = JSON.parse(event.data);
+          onData(data);
+        } catch (err) {
+          console.error("Invalid SSE data", err);
+        }
+      });
+
+      es.addEventListener("update", (event) => {
+        try {
+          const data: ${name} = JSON.parse(event.data);
+          onData(data);
+        } catch (err) {
+          console.error("Invalid SSE data", err);
+        }
+      });
+
+      es.addEventListener("delete", (event) => {
+        try {
+          const data: ${name} = JSON.parse(event.data);
+          onData(data);
+        } catch (err) {
+          console.error("Invalid SSE data", err);
+        }
+      });
     }
   };
 }`;
 
-    writeFileSync(join(clientsDir, `${plural}.ts`), clientCode);
-    clientImports.push(`import { ${plural} } from "./clients/${plural}";`);
-    clientExports.push(`    ${plural}: ${plural}(subgraphUrl),`);
-  }
+        writeFileSync(join(clientsDir, `${plural}.ts`), clientCode);
+        clientImports.push(`import { ${plural} } from "./clients/${plural}";`);
+        clientExports.push(`    ${plural}: ${plural}(subgraphUrl),`);
+      }
 
-  const rootClient = `
+      const rootClient = `
 ${clientImports.join("\n")}
 
 export function createSubgraphClient(subgraphUrl: string) {
@@ -158,8 +334,14 @@ ${clientExports.join("\n")}
   };
 }`;
 
-  writeFileSync(join(outDir, "client.ts"), rootClient);
-  console.log("✅ Subgraph client generated.");
+      writeFileSync(join(outDir, "client.ts"), rootClient);
+      rmSync(outputPath);
+      rmSync(`${extractTo}/resources`, { recursive: true, force: true });
+      console.log("✅ Subgraph client generated.");
+    });
+  }).on("error", (err) => {
+    console.error("Download failed:", err);
+  });
 };
 
 generate();

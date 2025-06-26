@@ -5,7 +5,7 @@ import axios from "axios";
 import { z } from "zod";
 import { configSchema, getSubgraphConfig } from "../verifier";
 
-const BASE_URL = "https://4f1zswx1-8080.asse.devtunnels.ms";
+const BASE_URL = "https://m127s71m-8080.asse.devtunnels.ms";
 
 // Zip files under a root folder (e.g., resources/)
 const zipFiles = (
@@ -32,7 +32,7 @@ const zipFiles = (
 
 // Step 1: Create subgraph info
 const createSubgraphInfo = async (config: z.infer<typeof configSchema>) => {
-  const { apiKey, name, slug, dataSources } = config;
+  const { apiKey, name, slug, dataSources, eventHandlers } = config;
   const payload = {
     name,
     slugName: slug,
@@ -42,6 +42,8 @@ const createSubgraphInfo = async (config: z.infer<typeof configSchema>) => {
       chainId,
       contractAddress,
     })),
+    contractEvents: eventHandlers.map(({ event }) => event),
+    eventABI: "test",
   };
 
   const response = await axios.post(
@@ -111,12 +113,14 @@ export const deploy = async () => {
   try {
     const config = getSubgraphConfig();
     const subgraph = await createSubgraphInfo(config);
+    console.log("Subgraph created with ID:", subgraph.id);
     const uploadUrl = await getPresignedUploadURL(subgraph.id, config);
 
     const zipPath = path.resolve("resources.zip");
     const filesToZip = [
       path.resolve(config.resource.handler),
       path.resolve(config.resource.schema),
+      path.resolve('config.yaml'),
     ];
 
     await zipFiles(filesToZip, zipPath);

@@ -9,7 +9,7 @@ switch (command) {
   case "generate-entity":
     import("./entity-generator/index.js").then((m) => m.generate?.());
     break;
-  case "generate-query-entity":
+  case "generate-query-client":
     import("./query-client-generator/index.js").then((m) => m.generate?.());
     break;
   case "verify":

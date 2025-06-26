@@ -54,8 +54,7 @@ export const generate = () => {
     });
 
     const source = `// Auto-generated entity class for ${name}
-import { set, get, getBy, count } from "../runtime/db";
-import { onInsert } from "../runtime/listener";
+import { set, get, getBy, count, onInsert } from "layerg-graph-5";
 
 export class ${name} {
   static table = "${name}";

@@ -1,15 +1,15 @@
-name: My Subgraph 14
-slug: my-subgraph-14
-apiKey: b03a041d250991446c20df2baec270e0e8eeafc48ee21e863aca9daebe059e39
+name: My Subgraph 16
+slug: my-subgraph-16
+apiKey: 9542fdeec244b51444ab31f4222f29cf9024d7334821e563cef4761b6bd785d4
 region: us-east-1
 resource:
   schema: ./schema.graphql
-  handler: ./resources/handler.ts
+  handler: ./handler.ts
 dataSources:
   - chainId: 2484
     contractAddress: "0x7C0203773f98bDDfAF0920a050fDd3B4cAc57eD4"
     startBlock: 14000
-  - chainId: 1
+  - chainId: 39
     contractAddress: "0x7C0203773f98bDDfAF0920a050fDd3B4cAc57eD4"
     startBlock: 14000
 eventHandlers:
