@@ -1,5 +1,3 @@
-#!/usr/bin/env ts-node
-
 import {
   readFileSync,
   writeFileSync,
@@ -13,7 +11,6 @@ import { join } from "path";
 import {
   parse,
   ObjectTypeDefinitionNode,
-  NamedTypeNode,
   TypeNode,
   FieldDefinitionNode,
 } from "graphql";

@@ -6,7 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const files = [
   path.join(__dirname, "../dist/bin/deployer/index.js"),
-  path.join(__dirname, "../dist/bin/generator/index.js"),
+  path.join(__dirname, "../dist/bin/entity-generator/index.js"),
+  path.join(__dirname, "../dist/bin/query-client-generator/index.js"),
   path.join(__dirname, "../dist/bin/verifier/index.js"),
 ];
 
