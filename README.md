@@ -1,6 +1,6 @@
 # Subgraph CLI Toolkit
 
-Supports entity generation, query client scaffolding, and event verification – optimized for custom subgraph platforms.
+Supports entity generation, query client scaffolding, and event verification.
 
 ---
 
@@ -10,7 +10,7 @@ Supports entity generation, query client scaffolding, and event verification –
 - **Generate Entities** from GraphQL schema definitions.
 - **Auto-generate Query Clients** for TypeScript integration.
 - **Verify Handlers** to ensure schema and logic alignment.
-- **Streaming database onchange data** and database runtime layer (WIP).
+- **Streaming database onchange data**.
 
 ---
 
@@ -103,4 +103,4 @@ eventHandlers:
 
 ## License
 
-MIT
+[MIT](https://opensource.org/licenses/MIT)
