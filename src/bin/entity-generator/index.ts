@@ -54,10 +54,10 @@ export const generate = () => {
     });
 
     const source = `// Auto-generated entity class for ${name}
-import { set, get, getBy, count, onInsert } from "layerg-graph-5";
+import { set, get, getBy, count, onInsert } from "layerg-graph-8";
 
 export class ${name} {
-  static table = "${name}";
+  static table = "${name.toLowerCase()}s";
 
 ${props.join("\n")}
 
@@ -65,8 +65,8 @@ ${props.join("\n")}
     Object.assign(this, init);
   }
 
-  async save(): Promise<void> {
-    await set(${name}.table, this);
+  async save(chainId: number): Promise<void> {
+    await set(${name}.table + '_' + chainId, this);
   }
 
   static async get(id: string): Promise<${name} | null> {
@@ -74,17 +74,17 @@ ${props.join("\n")}
     return row ? new ${name}(row) : null;
   }
 
-  static async getBy(field: keyof ${name}, value: any): Promise<${name} | null> {
-    const row = await getBy<${name}>(${name}.table, field as string, value);
+  static async getBy(field: keyof ${name}, value: any, chainId: number): Promise<${name} | null> {
+    const row = await getBy<${name}>(${name}.table + '_' + chainId, field as string, value);
     return row ? new ${name}(row) : null;
   }
 
-  static async count(where: Partial<${name}> = {}): Promise<number> {
-    return count<${name}>(${name}.table, where);
+  static async count(where: Partial<${name}> = {}, chainId: number): Promise<number> {
+    return count<${name}>(${name}.table + '_' + chainId, where);
   }
 
-  static onNewRecord(callback: (data: ${name}) => void) {
-    onInsert(${name}.table, (row) => callback(new ${name}(row)));
+  static onNewRecord(callback: (data: ${name}) => void, chainId: number) {
+    onInsert(${name}.table + '_' + chainId, (row) => callback(new ${name}(row)));
   }
 }
 `;

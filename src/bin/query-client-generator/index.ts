@@ -63,7 +63,7 @@ export const generate = async () => {
   const outDir = "generated";
   if (!subgraphId || !apiKey) {
     console.error(
-      "Usage: npx layerg-graph-5 generate-query-client --id <subgraphId> --apiKey <apiKey>"
+      "Usage: npx layerg-graph-8 generate-query-client --id <subgraphId> --apiKey <apiKey>"
     );
     process.exit(1);
   }
