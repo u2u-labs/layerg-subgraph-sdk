@@ -1,26 +1,106 @@
-# LayerG Subgraph SDK CLI
+# Subgraph CLI Toolkit
 
-`layerg-subgraph-sdk-6` is a command-line tool to help you generate entity classes and deploy subgraphs to the LayerG data indexing platform.
-
-It provides two main capabilities:
-- 📦 Generate TypeScript entity classes from your GraphQL schema
-- 🚀 Deploy your subgraph project (schema + handlers) using a `config.yaml` definition
+Supports entity generation, query client scaffolding, and event verification – optimized for custom subgraph platforms.
 
 ---
 
-## ✨ Features
+## Features
 
-- Generate runtime-safe entity classes with built-in `save`, `get`, `getBy`, and `onInsert` logic
-- Auto-zip and upload subgraph handlers to a pre-signed S3 endpoint
-- Fully typed YAML-based deployment config
-- Built for use with Docker and containerized handler runtimes
+- **Deploy Subgraphs** using a streamlined CLI interface.
+- **Generate Entities** from GraphQL schema definitions.
+- **Auto-generate Query Clients** for TypeScript integration.
+- **Verify Handlers** to ensure schema and logic alignment.
+- **Streaming database onchange data** and database runtime layer (WIP).
 
 ---
 
-## 📦 Installation
-
-### Option A: Use via `npx` (no install)
+## Installation
 
 ```bash
-npx layerg-subgraph-sdk-6 deploy
-npx layerg-subgraph-sdk-6 generate --schema ./schema.graphql --outDir ./generated
+npm install -g your-subgraph-cli
+# or local
+npm install your-subgraph-cli
+```
+
+---
+
+## Usage
+
+### CLI Entrypoint
+
+```bash
+subgraph-cli [command] [...options]
+#or local
+npx subgraph-cli [command] [...options]
+```
+
+### Commands
+
+#### `generate-entity`
+
+Generate entity classes from your GraphQL schema:
+
+```bash
+subgraph-cli generate-entity --schema <graphql schema file path> --out <target folder to generate entities>
+#or local
+npx subgraph-cli generate-entity --schema <graphql schema file path> --out <target folder to generate entities>
+```
+
+#### `generate-query-client`
+
+Create a query client to query and stream subgraph's data:
+
+```bash
+subgraph-cli generate-query-client --id <subgraph id> --apiKey <your api key>
+#or local
+npx subgraph-cli generate-query-client --id <subgraph id> --apiKey <your api key>
+```
+
+#### `verifier`
+
+Verify your config to make sure it works before deploying. Your `config.yaml` file must be placed in root: 
+
+```bash
+subgraph-cli verify
+#or local
+npx subgraph-cli verify
+```
+
+#### `deploy`
+
+Deploy your subgraph to Layerg's nodes. Your `config.yaml` file must be placed in root:
+
+```bash
+subgraph-cli deploy
+#or local
+npx subgraph-cli deploy
+```
+
+---
+
+## Configuration
+
+Most commands support flags like `--schema`, `--out`, and `--config`.  
+Ensure your `config.yaml` matches the following format:
+
+```yaml
+name: My Subgraph
+slug: my-subgraph
+apiKey: <your-api-key>
+resource:
+  schema: ./resources/schema.graphql
+  handler: ./resources/handler.ts
+dataSources:
+  - chainId: 1
+    contractAddress: 0x...
+    startBlock: 123456
+eventHandlers:
+  - event: MyEvent
+    handler: handleMyEvent
+```
+
+---
+
+## License
+
+MIT
