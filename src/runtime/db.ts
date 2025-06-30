@@ -1,12 +1,13 @@
-import { Pool, QueryResultRow } from "pg";
+import type { QueryResultRow } from "pg";
+import { Pool } from "pg";
 import dotenv from "dotenv";
 dotenv.config();
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: parseInt(process.env.PG_POOL_MAX || "10"),
-  idleTimeoutMillis: parseInt(process.env.PG_IDLE_TIMEOUT || "30000"),
-  connectionTimeoutMillis: parseInt(
+  max: Number.parseInt(process.env.PG_POOL_MAX || "10"),
+  idleTimeoutMillis: Number.parseInt(process.env.PG_IDLE_TIMEOUT || "30000"),
+  connectionTimeoutMillis: Number.parseInt(
     process.env.PG_CONNECTION_TIMEOUT || "2000"
   ),
 });
@@ -22,7 +23,7 @@ const columnCache: Record<string, string[]> = {};
 async function getTableColumns(table: string): Promise<string[]> {
   if (columnCache[table]) return columnCache[table];
   const { rows } = await pool.query<{ column_name: string }>(
-    `SELECT column_name FROM information_schema.columns WHERE table_name = $1`,
+    "SELECT column_name FROM information_schema.columns WHERE table_name = $1",
     [table]
   );
   const columns = rows.map((row) => row.column_name);
@@ -32,7 +33,7 @@ async function getTableColumns(table: string): Promise<string[]> {
 
 export async function set(
   table: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): Promise<void> {
   const columns = await getTableColumns(table);
   const keys = Object.keys(data).filter((k) => columns.includes(k));
@@ -67,7 +68,7 @@ export async function get<T extends QueryResultRow>(
 export async function getBy<T extends QueryResultRow>(
   table: string,
   field: string,
-  value: any
+  value: unknown
 ): Promise<T | null> {
   const { rows } = await pool.query<T>(
     `SELECT * FROM "${table}" WHERE "${field}" = $1 LIMIT 1`,
@@ -79,11 +80,11 @@ export async function getBy<T extends QueryResultRow>(
 
 export async function count<T extends QueryResultRow>(
   table: string,
-  where: Partial<Record<keyof T, any>> = {}
+  where: Partial<Record<keyof T, unknown>> = {}
 ): Promise<number> {
   const keys = Object.keys(where);
   let query = `SELECT COUNT(*) FROM "${table}"`;
-  let values: any[] = [];
+  let values: unknown[] = [];
 
   if (keys.length > 0) {
     const conditions = keys.map((k, i) => `"${k}" = $${i + 1}`).join(" AND ");
@@ -92,5 +93,5 @@ export async function count<T extends QueryResultRow>(
   }
 
   const { rows } = await pool.query<{ count: string }>(query, values);
-  return parseInt(rows[0]?.count ?? "0", 10);
+  return Number.parseInt(rows[0]?.count ?? "0", 10);
 }

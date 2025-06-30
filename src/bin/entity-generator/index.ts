@@ -1,6 +1,7 @@
-import { parse, ObjectTypeDefinitionNode, DocumentNode } from "graphql";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
-import { join } from "path";
+import type { ObjectTypeDefinitionNode, DocumentNode, TypeNode } from "graphql";
+import { parse } from "graphql";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 export const generate = () => {
   const args = process.argv.slice(2);
@@ -29,7 +30,7 @@ export const generate = () => {
     Bytes: "string",
   };
 
-  function unwrapType(typeNode: any): string {
+  function unwrapType(typeNode: TypeNode): string {
     if (typeNode.kind === "NamedType") return typeNode.name.value;
     if (typeNode.type) return unwrapType(typeNode.type);
     return "any";

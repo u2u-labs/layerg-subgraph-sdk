@@ -1,11 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import {
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import type {
   FieldDefinitionNode,
   ObjectTypeDefinitionNode,
-  parse,
   TypeNode,
 } from "graphql";
-import { join } from "path";
+import { parse } from "graphql";
+import { join } from "node:path";
 
 const scalarMap: Record<string, string> = {
   ID: "string",
@@ -25,28 +25,26 @@ const unwrapType = (typeNode: TypeNode): string => {
 
 const buildFieldSelection = (
   fields: readonly FieldDefinitionNode[],
-  selectArg?: any
+  selectArg?: Record<string, unknown>
 ): string => {
   return fields
-    .map((field: any) => {
+    .map((field: FieldDefinitionNode) => {
       const type = unwrapType(field.type);
       if (scalarMap[type]) {
         return field.name.value;
-      } else {
-        const subSelect = selectArg?.[field.name.value];
-        if (typeof subSelect === "object" && subSelect !== null) {
-          const keys = Object.keys(subSelect).join(" ");
-          return field.name.value + " { " + keys + " }";
-        } else {
-          return field.name.value + " { id }";
-        }
       }
+      const subSelect = selectArg?.[field.name.value];
+      if (typeof subSelect === "object" && subSelect !== null) {
+        const keys = Object.keys(subSelect).join(" ");
+        return `${field.name.value} { ${keys} }`;
+      }
+      return `${field.name.value} { id }`;
     })
     .join("\\n        ");
 };
 
 const outDir = "generated";
-const rawSchema = readFileSync(`schema.graphql`, "utf-8");
+const rawSchema = readFileSync("schema.graphql", "utf-8");
 const ast = parse(rawSchema);
 console.log("Schema parsed successfully.");
 
@@ -68,6 +66,7 @@ export const scalarMap: Record<string, string> = {
   Bytes: "string",
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export function unwrapType(typeNode: any): string {
   if (typeNode.kind === "NamedType") return typeNode.name.value;
   if ("type" in typeNode) return unwrapType(typeNode.type);
@@ -75,20 +74,27 @@ export function unwrapType(typeNode: any): string {
 }
 
 export const buildFieldSelection = (
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   fields: readonly any[],
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   selectArg?: any
 ): string => {
   return fields
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     .map((field: any) => {
       const type = unwrapType(field.type);
       if (scalarMap[type]) {
         return field.name.value;
+         // biome-ignore lint/style/noUselessElse: <explanation>
       } else {
         const subSelect = selectArg?.[field.name.value];
         if (typeof subSelect === "object" && subSelect !== null) {
           const keys = Object.keys(subSelect).join(" ");
+           // biome-ignore lint/style/useTemplate: <explanation>
           return field.name.value + " { " + keys + " }";
+          // biome-ignore lint/style/noUselessElse: <explanation>
         } else {
+          // biome-ignore lint/style/useTemplate: <explanation>
           return field.name.value + " { id }";
         }
       }
@@ -113,7 +119,7 @@ const clientExports: string[] = [];
 for (const entity of entities) {
   const name = entity.name.value;
   const singular = name.toLowerCase();
-  const plural = singular + "s";
+  const plural = `${singular}s`;
 
   const fields = (entity.fields || []).map((f) => {
     const typeName = unwrapType(f.type);
@@ -129,16 +135,15 @@ ${fields.map((f) => `  ${f.name}: ${f.tsType};`).join("\n")}
     const typeName = unwrapType(f.type);
     if (scalarMap[typeName]) {
       return `  ${f.name.value}?: boolean;`;
-    } else {
-      const subEntity = entityMap.get(typeName);
-      const nested =
-        subEntity?.fields
-          ?.map((sf) => `    ${sf.name.value}?: boolean;`)
-          .join("\n") || "    id?: boolean;";
-      return `  ${f.name.value}?: {
+    }
+    const subEntity = entityMap.get(typeName);
+    const nested =
+      subEntity?.fields
+        ?.map((sf) => `    ${sf.name.value}?: boolean;`)
+        .join("\n") || "    id?: boolean;";
+    return `  ${f.name.value}?: {
 ${nested}
   };`;
-    }
   });
 
   const selectTypeDef = `export type ${name}Select = {
@@ -147,18 +152,13 @@ ${selectFieldLines.join("\n")}
   writeFileSync(join(typesDir, `${name}Select.ts`), selectTypeDef);
   const defaultFields = buildFieldSelection(entity.fields || []);
 
-  const clientCode =
-    `
+  const clientCode = `
 import { request } from "graphql-request";
-import { ${name} } from "../types/${name}";
-import { ${name}Select } from "../types/${name}Select";
+import type { ${name} } from "../types/${name}";
+import type { ${name}Select } from "../types/${name}Select";
 import { buildFieldSelection } from "../helpers";
 
-const defaultFields = ` +
-    "`" +
-    buildFieldSelection(entity.fields || []) +
-    "`" +
-    `;
+const defaultFields = \"${buildFieldSelection(entity.fields || [])}\";
 
 function selectFields(select: ${name}Select | undefined): string {
   return select
@@ -173,17 +173,13 @@ export function ${plural}(subgraphUrl: string) {
         async select(select: ${name}Select): Promise<${name} | null> {
           const gqlFields = selectFields(select);
 
-          const query = ` +
-    "`" +
-    `
-            query ($id: ID!) {
-              ${plural}(where: { id: $id }) {
-                ${"${gqlFields}"}
+          const query = \`
+            query (\$id: ID!) {
+              ${plural}(where: { id: \$id }) {
+                \${gqlFields}
               }
             }
-          ` +
-    "`" +
-    `;
+          \`;
           type Response = { ${plural}: ${name}[] };
           const res: Response = await request(subgraphUrl, query, { id });
           return res.${plural}[0] || null;
@@ -199,12 +195,12 @@ export function ${plural}(subgraphUrl: string) {
 
         const whereLiteral = Object.entries(where || {}).map(([key, value]) => {
         if (typeof value === 'string') {
-          return \`\${key}: "\${value}"\`\;
+          return \`\${key}: "\${value}"\`;
         }})
 
         const query = \`query {
         ${plural}(where: { \${whereLiteral} }) {
-          \${gqlFields}\
+          \${gqlFields}
         }}\`;
     
         type Response = { ${plural}: ${name}[] };
@@ -214,7 +210,7 @@ export function ${plural}(subgraphUrl: string) {
     }},
 
     subscribe({ onData }: { onData: (data: ${name}) => void }): void {
-      const sseUrl = subgraphUrl.replace("/graphql", "/events/stream") +"&typeName=${name.toLowerCase()}s";
+      const sseUrl = \`\${subgraphUrl.replace("/graphql", "/events/stream")}&&typeName=${name.toLowerCase()}s\`\;
       const es = new EventSource(sseUrl);
 
       es.onmessage = (event) => {

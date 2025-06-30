@@ -1,9 +1,10 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import archiver from "archiver";
 import axios from "axios";
-import { z } from "zod";
-import { configSchema, getSubgraphConfig } from "../verifier";
+import type { z } from "zod";
+import type { configSchema } from "../verifier";
+import { getSubgraphConfig } from "../verifier";
 
 const BASE_URL = "https://m127s71m-8080.asse.devtunnels.ms";
 
@@ -120,7 +121,7 @@ export const deploy = async () => {
     const filesToZip = [
       path.resolve(config.resource.handler),
       path.resolve(config.resource.schema),
-      path.resolve('config.yaml'),
+      path.resolve("config.yaml"),
     ];
 
     await zipFiles(filesToZip, zipPath);

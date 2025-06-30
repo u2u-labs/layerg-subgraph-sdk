@@ -1,5 +1,5 @@
-import fs, { existsSync, statSync } from "fs";
-import path from "path";
+import fs, { existsSync, statSync } from "node:fs";
+import path from "node:path";
 import yaml from "js-yaml";
 import { z } from "zod";
 
