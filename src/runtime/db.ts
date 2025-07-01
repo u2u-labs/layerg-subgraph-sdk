@@ -44,13 +44,17 @@ export async function set(
     .filter((k) => k !== "id")
     .map((k) => `"${k}" = EXCLUDED."${k}"`)
     .join(", ");
-
   const query = `
     INSERT INTO "${table}" (${columnStr}) VALUES (${placeholders})
     ON CONFLICT ("id") DO UPDATE SET ${updates};
   `;
 
   await pool.query(query, values);
+}
+
+export async function remove(table: string, id: string): Promise<void> {
+  const query = `DELETE FROM "${table}" WHERE id = $1;`;
+  await pool.query(query, [id]);
 }
 
 export async function get<T extends QueryResultRow>(

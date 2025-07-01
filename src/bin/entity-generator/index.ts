@@ -31,7 +31,10 @@ export const generate = () => {
   };
 
   function unwrapType(typeNode: TypeNode): string {
-    if (typeNode.kind === "NamedType") return typeNode.name.value;
+    if (typeNode.kind === "NamedType") {
+      const typeName = typeNode.name.value;
+      return scalarMap[typeName] || "foreignKey";
+    }
     if (typeNode.type) return unwrapType(typeNode.type);
     return "any";
   }
@@ -47,17 +50,22 @@ export const generate = () => {
     const fields = def.fields || [];
 
     const props = fields.map((f) => {
+      const unwrappedType = unwrapType(f.type);
+      if (unwrappedType === "foreignKey") {
+        // Treat as FK to another entity type
+        return `  ${f.name.value}Id!: string; // FK to ${unwrapType(f.type)}`;
+      }
       const tsType = scalarMap[unwrapType(f.type)] || "any";
       return `  ${f.name.value}!: ${tsType};`;
     });
 
     const source = `// Auto-generated entity class for ${name}
-import { set, get, getBy, count } from "layerg-graph-8";
+import { set, get, getBy, count, remove } from "layerg-graph-10";
 
 export class ${name} {
   static table = "${name.toLowerCase()}s";
 
-${props.join("\n")}
+  ${props.join("\n")}
 
   constructor(init?: Partial<${name}>) {
     Object.assign(this, init);
@@ -67,8 +75,12 @@ ${props.join("\n")}
     await set(${name}.table + '_' + chainId, this);
   }
 
-  static async get(id: string): Promise<${name} | null> {
-    const row = await get<${name}>(${name}.table, id);
+  static async delete(id: string, chainId: number): Promise<void> {
+    await remove(${name}.table + '_' + chainId, id);
+  }
+
+  static async get(id: string, chainId: number): Promise<${name} | null> {
+    const row = await get<${name}>(${name}.table + '_' + chainId, id);
     return row ? new ${name}(row) : null;
   }
 
