@@ -60,7 +60,7 @@ export const generate = () => {
     });
 
     const source = `// Auto-generated entity class for ${name}
-import { set, get, getBy, count, remove } from "layerg-graph-10";
+import { set, get, getBy, count, remove } from "layerg-graph-14";
 
 export class ${name} {
   static table = "${name.toLowerCase()}s";
@@ -72,7 +72,12 @@ export class ${name} {
   }
 
   async save(chainId: number): Promise<void> {
-    await set(${name}.table + '_' + chainId, this);
+    const data: Record<string, unknown> = {};
+    Object.getOwnPropertyNames(this).forEach((key) => {
+      // @ts-ignore
+      data[key] = this[key];
+    });
+    await set(${name}.table + '_' + chainId, data);
   }
 
   static async delete(id: string, chainId: number): Promise<void> {

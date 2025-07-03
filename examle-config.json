@@ -1,0 +1,23 @@
+{
+  "name": "My Subgraph",
+  "nameSlug": "my-subgraph",
+  "dataSources": [
+    {
+      "chainId": 30,
+      "contractAddress": "0x7C0203773f98bDDfAF0920a050fDd3B4cAc57eD4",
+      "startBlock": 14000
+    },
+    {
+      "chainId": 2,
+      "contractAddress": "0x7C0203773f98bDDfAF0920a050fDd3B4cAc57eD4",
+      "startBlock": 14000
+    }
+  ],
+  "eventHandlers": [
+    {
+      "eventName" : "PostCreated",
+      "event": "PostCreated(indexed address,string)",
+      "handler": "handlePostCreated"
+    }
+  ]
+}

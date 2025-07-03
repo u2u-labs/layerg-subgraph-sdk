@@ -1,12 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
+import { exec } from "node:child_process";
+
 import archiver from "archiver";
 import axios from "axios";
 import type { z } from "zod";
-import type { configSchema } from "../verifier";
-import { getSubgraphConfig } from "../verifier";
+import { getSubgraphConfig, type configSchema } from "../verifier";
 
-const BASE_URL = "https://m127s71m-8080.asse.devtunnels.ms";
+const BASE_URL = "http://157.10.199.134:8096";
+
+const runBuild = (onBuildSuccessCallback: () => void) => {
+  exec("pnpm run build", (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Build failed: ${error.message}`);
+      process.exit(1);
+    }
+    onBuildSuccessCallback();
+  });
+};
 
 // Zip files under a root folder (e.g., resources/)
 const zipFiles = (
@@ -22,9 +33,15 @@ const zipFiles = (
     archive.on("error", reject);
     output.on("close", resolve);
 
-    for (const filePath of filePaths) {
-      const fileName = path.basename(filePath);
-      archive.file(filePath, { name: `${rootFolderName}/${fileName}` });
+    for (const p of filePaths) {
+      const baseName = path.basename(p);
+      const stats = fs.statSync(p);
+
+      if (stats.isDirectory()) {
+        archive.directory(p, `${rootFolderName}/${baseName}`);
+      } else if (stats.isFile()) {
+        archive.file(p, { name: `${rootFolderName}/${baseName}` });
+      }
     }
 
     archive.finalize();
@@ -33,11 +50,11 @@ const zipFiles = (
 
 // Step 1: Create subgraph info
 const createSubgraphInfo = async (config: z.infer<typeof configSchema>) => {
-  const { apiKey, name, slug, dataSources, eventHandlers } = config;
+  const { name, nameSlug, dataSources, eventHandlers } = config;
   const payload = {
     name,
-    slugName: slug,
-    region: config.region,
+    slugName: nameSlug,
+    region: "us-east-1",
     categories: [],
     contracts: dataSources.map(({ chainId, contractAddress }) => ({
       chainId,
@@ -59,14 +76,11 @@ const createSubgraphInfo = async (config: z.infer<typeof configSchema>) => {
 };
 
 // Step 2: Request pre-signed upload URL
-const getPresignedUploadURL = async (
-  subgraphId: string,
-  config: z.infer<typeof configSchema>
-) => {
+const getPresignedUploadURL = async (subgraphId: string, apiKey: string) => {
   const response = await axios.post(
     `${BASE_URL}/api/resource/presigned-url`,
     { subgraphId },
-    { headers: { Authorization: config.apiKey } }
+    { headers: { Authorization: apiKey } }
   );
   return response.data.data.url;
 };
@@ -85,13 +99,10 @@ const uploadZip = async (presignedUrl: string, zipPath: string) => {
 };
 
 // Step 4: Get resource URL for verification
-const fetchResourceUrl = async (
-  subgraphId: string,
-  config: z.infer<typeof configSchema>
-) => {
+const fetchResourceUrl = async (subgraphId: string, apiKey: string) => {
   const response = await axios.get(
     `${BASE_URL}/api/resource/presigned-url/${subgraphId}`,
-    { headers: { Authorization: config.apiKey } }
+    { headers: { Authorization: apiKey } }
   );
   return response.data.data.url;
 };
@@ -100,41 +111,65 @@ const fetchResourceUrl = async (
 const updateSubgraphResource = async (
   subgraphId: string,
   resourceUrl: string,
-  config: z.infer<typeof configSchema>
+  apiKey: string
 ) => {
   await axios.put(
     `${BASE_URL}/api/subgraph/deploy/${subgraphId}`,
     { s3ObjectUrl: resourceUrl },
-    { headers: { Authorization: config.apiKey } }
+    { headers: { Authorization: apiKey } }
   );
 };
 
 // Main deployment function
 export const deploy = async () => {
   try {
+    const args = process.argv.slice(2);
+    const apiKey = args[args.indexOf("--apiKey") + 1];
+
+    if (!apiKey) {
+      console.error(
+        "❌ --apiKey is required. Please provide a valid API key and run with args --apiKey <API_KEY>"
+      );
+      process.exit(1);
+    }
+
     const config = getSubgraphConfig();
     const subgraph = await createSubgraphInfo(config);
     console.log("Subgraph created with ID:", subgraph.id);
-    const uploadUrl = await getPresignedUploadURL(subgraph.id, config);
+    const uploadUrl = await getPresignedUploadURL(subgraph.id, apiKey);
 
     const zipPath = path.resolve("resources.zip");
     const filesToZip = [
-      path.resolve(config.resource.handler),
-      path.resolve(config.resource.schema),
-      path.resolve("config.yaml"),
+      path.resolve("./dist"),
+      path.resolve("schema.graphql"),
+      path.resolve("config.json"),
     ];
 
     await zipFiles(filesToZip, zipPath);
     await uploadZip(uploadUrl, zipPath);
 
-    const finalUrl = await fetchResourceUrl(subgraph.id, config);
-    await updateSubgraphResource(subgraph.id, finalUrl, config);
+    const finalUrl = await fetchResourceUrl(subgraph.id, apiKey);
+    await updateSubgraphResource(subgraph.id, finalUrl, apiKey);
 
     fs.rmSync(zipPath);
-    console.log("Subgraph deployment complete.");
+    console.log("Subgraph deployment complete");
+    console.log(subgraph.id);
+    console.log(finalUrl);
   } catch (err) {
     console.error("Deployment failed:", err);
   }
 };
 
-deploy();
+const args = process.argv.slice(2);
+const apiKey = args[args.indexOf("--apiKey") + 1];
+
+if (!apiKey) {
+  console.error(
+    "❌ --apiKey is required. Please provide a valid API key and run with args --apiKey <API_KEY>"
+  );
+  process.exit(1);
+}
+
+runBuild(() => {
+  deploy();
+});

@@ -16,7 +16,7 @@ import type {
 } from "graphql";
 import { get } from "node:https";
 
-const baseUrl = "https://c11p7wbp-8080.asse.devtunnels.ms";
+const baseUrl = "http://157.10.199.134:8096";
 
 const scalarMap: Record<string, string> = {
   ID: "string",
@@ -61,7 +61,7 @@ export const generate = async () => {
   const outDir = "generated";
   if (!subgraphId || !apiKey) {
     console.error(
-      "Usage: npx layerg-graph-10 generate-query-client --id <subgraphId> --apiKey <apiKey>"
+      "Usage: npx layerg-graph-14 generate-query-client --id <subgraphId> --apiKey <apiKey>"
     );
     process.exit(1);
   }
